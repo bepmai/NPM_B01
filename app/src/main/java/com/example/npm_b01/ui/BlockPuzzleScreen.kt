@@ -263,32 +263,36 @@ fun BlockPuzzleGame(
             }
 
             // Game Over Dialog
-            AnimatedVisibility(
-                visible = state.isGameOver,
-                enter = fadeIn() + scaleIn(),
-                exit = fadeOut() + scaleOut()
-            ) {
-                GameOverDialog(
-                    score = state.score,
-                    highScore = state.highScore,
-                    theme = currentTheme,
-                    onRestart = { viewModel.restartGame() }
-                )
+            Column {
+                AnimatedVisibility(
+                    visible = state.isGameOver,
+                    enter = fadeIn() + scaleIn(),
+                    exit = fadeOut() + scaleOut()
+                ) {
+                    GameOverDialog(
+                        score = state.score,
+                        highScore = state.highScore,
+                        theme = currentTheme,
+                        onRestart = { viewModel.restartGame() }
+                    )
+                }
             }
 
             // Statistics Sheet
-            AnimatedVisibility(
-                visible = showStatsDialog,
-                enter = fadeIn() + scaleIn(),
-                exit = fadeOut() + scaleOut()
-            ) {
-                StatsDialog(
-                    highScore = state.highScore,
-                    totalGames = state.totalGamesPlayed,
-                    totalLines = state.totalLinesCleared,
-                    theme = currentTheme,
-                    onClose = { showStatsDialog = false }
-                )
+            Column {
+                AnimatedVisibility(
+                    visible = showStatsDialog,
+                    enter = fadeIn() + scaleIn(),
+                    exit = fadeOut() + scaleOut()
+                ) {
+                    StatsDialog(
+                        highScore = state.highScore,
+                        totalGames = state.totalGamesPlayed,
+                        totalLines = state.totalLinesCleared,
+                        theme = currentTheme,
+                        onClose = { showStatsDialog = false }
+                    )
+                }
             }
         }
     }
