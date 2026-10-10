@@ -4,6 +4,11 @@ import androidx.compose.ui.graphics.Color
 import java.util.UUID
 import kotlin.random.Random
 
+enum class GameMode(val displayName: String) {
+    CLASSIC("Classic Endless"),
+    LEVELS("Level Campaign")
+}
+
 /**
  * Represents a single block piece in the game.
  * [shape] is a 2D boolean array representing the occupied blocks of the piece.

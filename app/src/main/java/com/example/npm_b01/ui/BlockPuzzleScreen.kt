@@ -35,6 +35,7 @@ import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -63,6 +64,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.npm_b01.model.BlockPiece
+import com.example.npm_b01.model.GameMode
 import com.example.npm_b01.model.GameTheme
 import com.example.npm_b01.viewmodel.BlockPuzzleState
 import com.example.npm_b01.viewmodel.BlockPuzzleViewModel
@@ -159,10 +161,9 @@ fun BlockPuzzleGame(
             ) {
                 // Header
                 GameHeader(
-                    score = state.score,
-                    highScore = state.highScore,
-                    combo = state.combo,
+                    state = state,
                     theme = currentTheme,
+                    onGameModeChange = { viewModel.switchGameMode(it) },
                     onThemeChange = { viewModel.switchTheme(it) },
                     onOpenStats = { showStatsDialog = true },
                     onRestart = { viewModel.restartGame() }
@@ -280,6 +281,22 @@ fun BlockPuzzleGame(
                 }
             }
 
+            // Level Complete Dialog
+            Column {
+                AnimatedVisibility(
+                    visible = state.isLevelCompleted,
+                    enter = fadeIn() + scaleIn(),
+                    exit = fadeOut() + scaleOut()
+                ) {
+                    LevelCompleteDialog(
+                        level = state.currentLevel,
+                        score = state.score,
+                        theme = currentTheme,
+                        onNextLevel = { viewModel.nextLevel() }
+                    )
+                }
+            }
+
             // Statistics Sheet
             Column {
                 AnimatedVisibility(
@@ -302,15 +319,15 @@ fun BlockPuzzleGame(
 
 @Composable
 fun GameHeader(
-    score: Int,
-    highScore: Int,
-    combo: Int,
+    state: BlockPuzzleState,
     theme: GameTheme,
+    onGameModeChange: (GameMode) -> Unit,
     onThemeChange: (GameTheme) -> Unit,
     onOpenStats: () -> Unit,
     onRestart: () -> Unit
 ) {
     var showThemeMenu by remember { mutableStateOf(false) }
+    var showModeMenu by remember { mutableStateOf(false) }
 
     Column(
         modifier = Modifier.fillMaxWidth(),
@@ -321,12 +338,56 @@ fun GameHeader(
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Text(
-                text = "BLOCK PUZZLE",
-                fontSize = 22.sp,
-                fontWeight = FontWeight.Bold,
-                color = Color.White
-            )
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Text(
+                    text = if (state.gameMode == GameMode.LEVELS) "LEVEL ${state.currentLevel}" else "CLASSIC",
+                    fontSize = 20.sp,
+                    fontWeight = FontWeight.ExtraBold,
+                    color = Color.White
+                )
+
+                Spacer(modifier = Modifier.width(6.dp))
+
+                // Mode Selector Button
+                Box {
+                    Box(
+                        modifier = Modifier
+                            .clip(RoundedCornerShape(8.dp))
+                            .background(theme.surfaceContainer)
+                            .clickable { showModeMenu = true }
+                            .padding(horizontal = 8.dp, vertical = 4.dp)
+                    ) {
+                        Text(
+                            text = "⚙️ Mode",
+                            fontSize = 11.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = theme.accent
+                        )
+                    }
+
+                    DropdownMenu(
+                        expanded = showModeMenu,
+                        onDismissRequest = { showModeMenu = false },
+                        modifier = Modifier.background(theme.surfaceContainer)
+                    ) {
+                        GameMode.entries.forEach { mode ->
+                            DropdownMenuItem(
+                                text = {
+                                    Text(
+                                        text = mode.displayName,
+                                        color = if (mode == state.gameMode) theme.accent else Color.White,
+                                        fontWeight = if (mode == state.gameMode) FontWeight.Bold else FontWeight.Normal
+                                    )
+                                },
+                                onClick = {
+                                    onGameModeChange(mode)
+                                    showModeMenu = false
+                                }
+                            )
+                        }
+                    }
+                }
+            }
 
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 // Theme Selector
@@ -390,7 +451,46 @@ fun GameHeader(
             }
         }
 
-        Spacer(modifier = Modifier.height(10.dp))
+        Spacer(modifier = Modifier.height(8.dp))
+
+        // Level Target Progress Bar (If in Level Mode)
+        if (state.gameMode == GameMode.LEVELS) {
+            val progress = (state.score.toFloat() / state.levelTargetScore.toFloat()).coerceIn(0f, 1f)
+
+            Column(modifier = Modifier.fillMaxWidth()) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ) {
+                    Text(
+                        text = "Level Target",
+                        fontSize = 11.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = Color.Gray
+                    )
+                    Text(
+                        text = "${state.score} / ${state.levelTargetScore} PTS",
+                        fontSize = 11.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = theme.accent
+                    )
+                }
+
+                Spacer(modifier = Modifier.height(4.dp))
+
+                LinearProgressIndicator(
+                    progress = { progress },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(8.dp)
+                        .clip(RoundedCornerShape(4.dp)),
+                    color = theme.accent,
+                    trackColor = theme.surfaceContainer,
+                )
+            }
+
+            Spacer(modifier = Modifier.height(8.dp))
+        }
 
         Row(
             modifier = Modifier.fillMaxWidth(),
@@ -415,7 +515,7 @@ fun GameHeader(
                         color = Color.Gray
                     )
                     Text(
-                        text = "$score",
+                        text = "${state.score}",
                         fontSize = 24.sp,
                         fontWeight = FontWeight.ExtraBold,
                         color = theme.accent
@@ -450,7 +550,7 @@ fun GameHeader(
                         )
                     }
                     Text(
-                        text = "$highScore",
+                        text = "${state.highScore}",
                         fontSize = 24.sp,
                         fontWeight = FontWeight.ExtraBold,
                         color = Color.White
@@ -460,7 +560,7 @@ fun GameHeader(
         }
 
         // Combo Badge
-        AnimatedVisibility(visible = combo > 1) {
+        AnimatedVisibility(visible = state.combo > 1) {
             Box(
                 modifier = Modifier
                     .padding(top = 6.dp)
@@ -473,7 +573,7 @@ fun GameHeader(
                     .padding(horizontal = 14.dp, vertical = 3.dp)
             ) {
                 Text(
-                    text = "$combo x COMBO! 🔥",
+                    text = "${state.combo} x COMBO! 🔥",
                     color = Color.White,
                     fontWeight = FontWeight.ExtraBold,
                     fontSize = 13.sp
@@ -730,6 +830,91 @@ fun PieceShapeView(
                     } else {
                         Spacer(modifier = Modifier.size(cellSizeDp))
                     }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+fun LevelCompleteDialog(
+    level: Int,
+    score: Int,
+    theme: GameTheme,
+    onNextLevel: () -> Unit
+) {
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(Color.Black.copy(alpha = 0.85f)),
+        contentAlignment = Alignment.Center
+    ) {
+        Card(
+            modifier = Modifier
+                .fillMaxWidth(0.85f)
+                .padding(16.dp),
+            colors = CardDefaults.cardColors(containerColor = theme.surfaceContainer),
+            shape = RoundedCornerShape(24.dp)
+        ) {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(24.dp),
+                horizontalAlignment = Alignment.CenterHorizontally
+            ) {
+                Text(
+                    text = "🎉 LEVEL COMPLETED! 🎉",
+                    fontSize = 22.sp,
+                    fontWeight = FontWeight.ExtraBold,
+                    color = theme.accent,
+                    textAlign = TextAlign.Center
+                )
+
+                Spacer(modifier = Modifier.height(12.dp))
+
+                Text(
+                    text = "YOU PASSED LEVEL $level!",
+                    fontSize = 14.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = Color.White
+                )
+
+                Spacer(modifier = Modifier.height(16.dp))
+
+                Text(
+                    text = "SCORE: $score",
+                    fontSize = 28.sp,
+                    fontWeight = FontWeight.ExtraBold,
+                    color = Color.White
+                )
+
+                Spacer(modifier = Modifier.height(8.dp))
+
+                Text(
+                    text = "🎁 Reward: +2 Rotation Charges ⚡",
+                    fontSize = 13.sp,
+                    fontWeight = FontWeight.SemiBold,
+                    color = theme.accent
+                )
+
+                Spacer(modifier = Modifier.height(24.dp))
+
+                Button(
+                    onClick = onNextLevel,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(50.dp),
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = theme.accent
+                    ),
+                    shape = RoundedCornerShape(16.dp)
+                ) {
+                    Text(
+                        text = "NEXT LEVEL ➔",
+                        fontSize = 16.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = Color.Black
+                    )
                 }
             }
         }
