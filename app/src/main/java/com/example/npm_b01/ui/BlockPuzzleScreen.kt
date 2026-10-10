@@ -180,24 +180,26 @@ fun BlockPuzzleGame(
                     )
 
                     // Floating Score Effect Banner
-                    state.activeEffect?.let { effect ->
+                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
                         AnimatedVisibility(
-                            visible = true,
+                            visible = state.activeEffect != null,
                             enter = fadeIn() + slideInVertically(initialOffsetY = { 40 }),
                             exit = fadeOut() + slideOutVertically(targetOffsetY = { -40 })
                         ) {
-                            Box(
-                                modifier = Modifier
-                                    .clip(RoundedCornerShape(16.dp))
-                                    .background(currentTheme.accent)
-                                    .padding(horizontal = 20.dp, vertical = 8.dp)
-                            ) {
-                                Text(
-                                    text = effect.text,
-                                    color = Color.Black,
-                                    fontSize = 20.sp,
-                                    fontWeight = FontWeight.ExtraBold
-                                )
+                            state.activeEffect?.let { effect ->
+                                Box(
+                                    modifier = Modifier
+                                        .clip(RoundedCornerShape(16.dp))
+                                        .background(currentTheme.accent)
+                                        .padding(horizontal = 20.dp, vertical = 8.dp)
+                                ) {
+                                    Text(
+                                        text = effect.text,
+                                        color = Color.Black,
+                                        fontSize = 20.sp,
+                                        fontWeight = FontWeight.ExtraBold
+                                    )
+                                }
                             }
                         }
                     }
