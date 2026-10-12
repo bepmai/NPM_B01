@@ -3,6 +3,7 @@ package com.example.npm_b01.viewmodel
 import android.app.Application
 import android.content.Context
 import androidx.lifecycle.AndroidViewModel
+import com.example.npm_b01.audio.SoundManager
 import com.example.npm_b01.model.BlockPiece
 import com.example.npm_b01.model.GameMode
 import com.example.npm_b01.model.GameTheme
@@ -339,8 +340,10 @@ class BlockPuzzleViewModel(application: Application) : AndroidViewModel(applicat
             effect = ScoreEffect(text = effectText)
 
             newCombo += 1
+            SoundManager.playLineClearSound(newCombo)
         } else {
             newCombo = 1
+            SoundManager.playPlaceSound()
         }
 
         // Clear cells

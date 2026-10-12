@@ -61,6 +61,7 @@ import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.example.npm_b01.audio.SoundManager
 import com.example.npm_b01.model.BlockPiece
 import com.example.npm_b01.model.GameMode
 import com.example.npm_b01.model.GameTheme
@@ -215,6 +216,7 @@ fun BlockPuzzleGame(
                     rotationCharges = state.rotationCharges,
                     onRotatePiece = { index -> viewModel.rotatePiece(index) },
                     onDragStart = { index, piece, position ->
+                        SoundManager.playPickUpSound()
                         draggingState = DraggingState(index, piece, position)
                     },
                     onDrag = { position ->
