@@ -19,7 +19,7 @@ data class ScoreEffect(
 )
 
 data class BlockPuzzleState(
-    val board: List<List<Int>> = List(GRID_SIZE) { List(GRID_SIZE) { 0 } },
+    val board: List<List<Int>> = List(6) { List(6) { 0 } },
     val upcomingPieces: List<BlockPiece?> = listOf(
         BlockPiece.getRandomPiece(),
         BlockPiece.getRandomPiece(),
@@ -37,12 +37,10 @@ data class BlockPuzzleState(
     val gameMode: GameMode = GameMode.LEVELS,
     val playType: PlayType = PlayType.FREE,
     val currentLevel: Int = 1,
-    val levelTargetScore: Int = 300,
+    val levelTargetScore: Int = 150,
     val isLevelCompleted: Boolean = false
 ) {
-    companion object {
-        const val GRID_SIZE = 8
-    }
+    val gridSize: Int get() = if (board.isNotEmpty()) board.size else 8
 }
 
 class BlockPuzzleViewModel(application: Application) : AndroidViewModel(application) {
@@ -51,19 +49,44 @@ class BlockPuzzleViewModel(application: Application) : AndroidViewModel(applicat
 
     private val savedLevel = prefs.getInt("current_level", 1)
 
+    private fun getGridSizeForLevel(level: Int, mode: GameMode): Int {
+        if (mode == GameMode.CLASSIC) return 8
+        return when (level) {
+            1, 2 -> 6   // Level 1 & 2: 6x6 grid (Dễ cho người mới)
+            3, 4, 5 -> 7 // Level 3-5: 7x7 grid
+            else -> 8    // Level 6+: 8x8 grid đầy đủ
+        }
+    }
+
+    private fun getTargetScoreForLevel(level: Int): Int {
+        return when (level) {
+            1 -> 150
+            2 -> 250
+            3 -> 400
+            4 -> 550
+            5 -> 700
+            else -> level * 200
+        }
+    }
+
     private val _uiState = MutableStateFlow(
-        BlockPuzzleState(
-            highScore = prefs.getInt("high_score", 0),
-            totalGamesPlayed = prefs.getInt("total_games", 0),
-            totalLinesCleared = prefs.getInt("total_lines", 0),
-            currentLevel = savedLevel,
-            levelTargetScore = savedLevel * 300
-        )
+        run {
+            val initialGridSize = getGridSizeForLevel(savedLevel, GameMode.LEVELS)
+            BlockPuzzleState(
+                highScore = prefs.getInt("high_score", 0),
+                totalGamesPlayed = prefs.getInt("total_games", 0),
+                totalLinesCleared = prefs.getInt("total_lines", 0),
+                currentLevel = savedLevel,
+                levelTargetScore = getTargetScoreForLevel(savedLevel),
+                board = List(initialGridSize) { List(initialGridSize) { 0 } }
+            )
+        }
     )
     val uiState: StateFlow<BlockPuzzleState> = _uiState.asStateFlow()
 
     fun startFreePlay() {
         _uiState.update { currentState ->
+            val gridSize = getGridSizeForLevel(currentState.currentLevel, currentState.gameMode)
             currentState.copy(
                 playType = PlayType.FREE,
                 score = 0,
@@ -71,7 +94,7 @@ class BlockPuzzleViewModel(application: Application) : AndroidViewModel(applicat
                 isGameOver = false,
                 isLevelCompleted = false,
                 rotationCharges = 3,
-                board = List(BlockPuzzleState.GRID_SIZE) { List(BlockPuzzleState.GRID_SIZE) { 0 } },
+                board = List(gridSize) { List(gridSize) { 0 } },
                 upcomingPieces = listOf(
                     BlockPiece.getRandomPiece(),
                     BlockPiece.getRandomPiece(),
@@ -82,9 +105,11 @@ class BlockPuzzleViewModel(application: Application) : AndroidViewModel(applicat
     }
 
     fun startPresetChallenge() {
-        val presetBoard = generatePresetBoard()
-        _uiState.update { currentState ->
-            currentState.copy(
+        val currentState = _uiState.value
+        val gridSize = getGridSizeForLevel(currentState.currentLevel, currentState.gameMode)
+        val presetBoard = generatePresetBoard(gridSize)
+        _uiState.update {
+            it.copy(
                 playType = PlayType.PRESET,
                 score = 0,
                 combo = 1,
@@ -101,22 +126,21 @@ class BlockPuzzleViewModel(application: Application) : AndroidViewModel(applicat
         }
     }
 
-    private fun generatePresetBoard(): List<List<Int>> {
-        val board = MutableList(BlockPuzzleState.GRID_SIZE) { MutableList(BlockPuzzleState.GRID_SIZE) { 0 } }
+    private fun generatePresetBoard(gridSize: Int): List<List<Int>> {
+        val board = MutableList(gridSize) { MutableList(gridSize) { 0 } }
         val random = Random()
         var placedCount = 0
-        val targetBlocks = 14
+        val targetBlocks = if (gridSize == 6) 6 else if (gridSize == 7) 10 else 14
 
         while (placedCount < targetBlocks) {
-            val r = random.nextInt(BlockPuzzleState.GRID_SIZE)
-            val c = random.nextInt(BlockPuzzleState.GRID_SIZE)
+            val r = random.nextInt(gridSize)
+            val c = random.nextInt(gridSize)
             if (board[r][c] == 0) {
                 board[r][c] = random.nextInt(6) + 1
-                // Verify no row or col is completely filled yet
                 val rowFull = board[r].all { it != 0 }
-                val colFull = (0 until BlockPuzzleState.GRID_SIZE).all { board[it][c] != 0 }
+                val colFull = (0 until gridSize).all { board[it][c] != 0 }
                 if (rowFull || colFull) {
-                    board[r][c] = 0 // revert
+                    board[r][c] = 0
                 } else {
                     placedCount++
                 }
@@ -127,7 +151,8 @@ class BlockPuzzleViewModel(application: Application) : AndroidViewModel(applicat
 
     fun switchGameMode(mode: GameMode) {
         _uiState.update { currentState ->
-            val newBoard = if (currentState.playType == PlayType.PRESET) generatePresetBoard() else List(BlockPuzzleState.GRID_SIZE) { List(BlockPuzzleState.GRID_SIZE) { 0 } }
+            val gridSize = getGridSizeForLevel(currentState.currentLevel, mode)
+            val newBoard = if (currentState.playType == PlayType.PRESET) generatePresetBoard(gridSize) else List(gridSize) { List(gridSize) { 0 } }
             currentState.copy(
                 gameMode = mode,
                 score = 0,
@@ -147,11 +172,12 @@ class BlockPuzzleViewModel(application: Application) : AndroidViewModel(applicat
     fun nextLevel() {
         val currentState = _uiState.value
         val nextLvl = currentState.currentLevel + 1
-        val newTarget = nextLvl * 350
+        val newTarget = getTargetScoreForLevel(nextLvl)
+        val gridSize = getGridSizeForLevel(nextLvl, currentState.gameMode)
 
         prefs.edit().putInt("current_level", nextLvl).apply()
 
-        val newBoard = if (currentState.playType == PlayType.PRESET) generatePresetBoard() else List(BlockPuzzleState.GRID_SIZE) { List(BlockPuzzleState.GRID_SIZE) { 0 } }
+        val newBoard = if (currentState.playType == PlayType.PRESET) generatePresetBoard(gridSize) else List(gridSize) { List(gridSize) { 0 } }
 
         _uiState.update {
             it.copy(
@@ -182,7 +208,8 @@ class BlockPuzzleViewModel(application: Application) : AndroidViewModel(applicat
             .putInt("total_lines", currentState.totalLinesCleared)
             .apply()
 
-        val newBoard = if (currentState.playType == PlayType.PRESET) generatePresetBoard() else List(BlockPuzzleState.GRID_SIZE) { List(BlockPuzzleState.GRID_SIZE) { 0 } }
+        val gridSize = getGridSizeForLevel(currentState.currentLevel, currentState.gameMode)
+        val newBoard = if (currentState.playType == PlayType.PRESET) generatePresetBoard(gridSize) else List(gridSize) { List(gridSize) { 0 } }
 
         _uiState.update {
             BlockPuzzleState(
@@ -193,7 +220,7 @@ class BlockPuzzleViewModel(application: Application) : AndroidViewModel(applicat
                 gameMode = currentState.gameMode,
                 playType = currentState.playType,
                 currentLevel = currentState.currentLevel,
-                levelTargetScore = currentState.currentLevel * 300,
+                levelTargetScore = getTargetScoreForLevel(currentState.currentLevel),
                 rotationCharges = 3,
                 board = newBoard,
                 upcomingPieces = listOf(
@@ -234,14 +261,15 @@ class BlockPuzzleViewModel(application: Application) : AndroidViewModel(applicat
         startRow: Int,
         startCol: Int
     ): Boolean {
+        val gridSize = board.size
         for (r in piece.shape.indices) {
             for (c in piece.shape[r].indices) {
                 if (piece.shape[r][c]) {
                     val targetRow = startRow + r
                     val targetCol = startCol + c
 
-                    if (targetRow !in 0 until BlockPuzzleState.GRID_SIZE ||
-                        targetCol !in 0 until BlockPuzzleState.GRID_SIZE
+                    if (targetRow !in 0 until gridSize ||
+                        targetCol !in 0 until gridSize
                     ) {
                         return false
                     }
@@ -265,6 +293,8 @@ class BlockPuzzleViewModel(application: Application) : AndroidViewModel(applicat
             return false
         }
 
+        val gridSize = currentState.gridSize
+
         // 1. Write piece blocks
         val newBoard = currentState.board.map { it.toMutableList() }
         for (r in piece.shape.indices) {
@@ -281,14 +311,14 @@ class BlockPuzzleViewModel(application: Application) : AndroidViewModel(applicat
         val rowsToClear = mutableListOf<Int>()
         val colsToClear = mutableListOf<Int>()
 
-        for (r in 0 until BlockPuzzleState.GRID_SIZE) {
+        for (r in 0 until gridSize) {
             if (newBoard[r].all { it != 0 }) {
                 rowsToClear.add(r)
             }
         }
 
-        for (c in 0 until BlockPuzzleState.GRID_SIZE) {
-            if ((0 until BlockPuzzleState.GRID_SIZE).all { r -> newBoard[r][c] != 0 }) {
+        for (c in 0 until gridSize) {
+            if ((0 until gridSize).all { r -> newBoard[r][c] != 0 }) {
                 colsToClear.add(c)
             }
         }
@@ -315,12 +345,12 @@ class BlockPuzzleViewModel(application: Application) : AndroidViewModel(applicat
 
         // Clear cells
         for (r in rowsToClear) {
-            for (c in 0 until BlockPuzzleState.GRID_SIZE) {
+            for (c in 0 until gridSize) {
                 newBoard[r][c] = 0
             }
         }
         for (c in colsToClear) {
-            for (r in 0 until BlockPuzzleState.GRID_SIZE) {
+            for (r in 0 until gridSize) {
                 newBoard[r][c] = 0
             }
         }
@@ -377,9 +407,10 @@ class BlockPuzzleViewModel(application: Application) : AndroidViewModel(applicat
         val remainingPieces = pieces.filterNotNull()
         if (remainingPieces.isEmpty()) return false
 
+        val gridSize = board.size
         for (piece in remainingPieces) {
-            for (r in 0 until BlockPuzzleState.GRID_SIZE) {
-                for (c in 0 until BlockPuzzleState.GRID_SIZE) {
+            for (r in 0 until gridSize) {
+                for (c in 0 until gridSize) {
                     if (canPlacePiece(board, piece, r, c)) {
                         return false
                     }

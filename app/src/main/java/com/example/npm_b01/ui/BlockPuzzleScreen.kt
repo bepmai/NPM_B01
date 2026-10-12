@@ -1,7 +1,6 @@
 package com.example.npm_b01.ui
 
 import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
@@ -47,7 +46,6 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.draw.scale
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.graphics.Brush
@@ -97,7 +95,7 @@ fun BlockPuzzleGame(
     var showStatsDialog by remember { mutableStateOf(false) }
 
     val cellSizePx = if (boardBoundsInRoot.width > 0f) {
-        boardBoundsInRoot.width / BlockPuzzleState.GRID_SIZE
+        boardBoundsInRoot.width / state.gridSize
     } else {
         0f
     }
@@ -130,8 +128,8 @@ fun BlockPuzzleGame(
         val rawCol = (relX / cellSizePx).roundToInt()
         val rawRow = (relY / cellSizePx).roundToInt()
 
-        val startCol = rawCol.coerceIn(0, (BlockPuzzleState.GRID_SIZE - drag.piece.width).coerceAtLeast(0))
-        val startRow = rawRow.coerceIn(0, (BlockPuzzleState.GRID_SIZE - drag.piece.height).coerceAtLeast(0))
+        val startCol = rawCol.coerceIn(0, (state.gridSize - drag.piece.width).coerceAtLeast(0))
+        val startRow = rawRow.coerceIn(0, (state.gridSize - drag.piece.height).coerceAtLeast(0))
 
         return Pair(startRow, startCol)
     }
@@ -343,8 +341,8 @@ fun GameHeader(
         ) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Text(
-                    text = if (state.gameMode == GameMode.LEVELS) "LEVEL ${state.currentLevel}" else "CLASSIC",
-                    fontSize = 20.sp,
+                    text = if (state.gameMode == GameMode.LEVELS) "LEVEL ${state.currentLevel} (${state.gridSize}x${state.gridSize})" else "CLASSIC",
+                    fontSize = 18.sp,
                     fontWeight = FontWeight.ExtraBold,
                     color = Color.White
                 )
@@ -392,7 +390,7 @@ fun GameHeader(
                 }
             }
 
-            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                 // Theme Selector
                 Box {
                     IconButton(
@@ -401,7 +399,7 @@ fun GameHeader(
                             .clip(CircleShape)
                             .background(theme.surfaceContainer)
                     ) {
-                        Text(text = "🎨", fontSize = 16.sp)
+                        Text(text = "🎨", fontSize = 15.sp)
                     }
 
                     DropdownMenu(
@@ -434,7 +432,7 @@ fun GameHeader(
                         .clip(CircleShape)
                         .background(theme.surfaceContainer)
                 ) {
-                    Text(text = "🏆", fontSize = 16.sp)
+                    Text(text = "🏆", fontSize = 15.sp)
                 }
 
                 // Home Button
@@ -444,7 +442,7 @@ fun GameHeader(
                         .clip(CircleShape)
                         .background(theme.surfaceContainer)
                 ) {
-                    Text(text = "🏠", fontSize = 16.sp)
+                    Text(text = "🏠", fontSize = 15.sp)
                 }
 
                 // Restart Button
@@ -457,7 +455,7 @@ fun GameHeader(
                     Text(
                         text = "↺",
                         color = Color.White,
-                        fontSize = 20.sp,
+                        fontSize = 18.sp,
                         fontWeight = FontWeight.Bold
                     )
                 }
@@ -603,6 +601,7 @@ fun GameBoard(
     placementPreview: PlacementPreview?,
     onBoardPositioned: (Rect) -> Unit
 ) {
+    val gridSize = board.size
     Card(
         modifier = Modifier
             .fillMaxWidth()
@@ -620,14 +619,14 @@ fun GameBoard(
                 },
             verticalArrangement = Arrangement.SpaceEvenly
         ) {
-            for (r in 0 until BlockPuzzleState.GRID_SIZE) {
+            for (r in 0 until gridSize) {
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
                         .weight(1f),
                     horizontalArrangement = Arrangement.SpaceEvenly
                 ) {
-                    for (c in 0 until BlockPuzzleState.GRID_SIZE) {
+                    for (c in 0 until gridSize) {
                         val colorId = board[r][c]
 
                         var isPreviewCell = false
