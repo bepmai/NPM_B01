@@ -1,5 +1,6 @@
 package com.example.npm_b01
 
+import android.content.Context
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
@@ -19,10 +20,12 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.tooling.preview.Preview
 import com.example.npm_b01.ui.AnimatedSplashScreen
 import com.example.npm_b01.ui.BlockPuzzleGame
+import com.example.npm_b01.ui.OnboardingScreen
 import com.example.npm_b01.ui.theme.NPM_B01Theme
 
 enum class ScreenState {
     SPLASH,
+    ONBOARDING,
     GAME
 }
 
@@ -30,8 +33,12 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
+
+        val prefs = getSharedPreferences("block_puzzle_prefs", Context.MODE_PRIVATE)
+
         setContent {
             NPM_B01Theme {
+                // Always start with Splash Screen first
                 var currentScreen by remember { mutableStateOf(ScreenState.SPLASH) }
 
                 Scaffold(modifier = Modifier.fillMaxSize()) { innerPadding ->
@@ -42,9 +49,25 @@ class MainActivity : ComponentActivity() {
                             label = "ScreenTransition"
                         ) { screen ->
                             when (screen) {
+                                // 1. Splash Screen
                                 ScreenState.SPLASH -> AnimatedSplashScreen(
-                                    onSplashFinished = { currentScreen = ScreenState.GAME }
+                                    onSplashFinished = {
+                                        val hasSeenOnboarding = prefs.getBoolean("has_seen_onboarding", false)
+                                        currentScreen = if (!hasSeenOnboarding) {
+                                            ScreenState.ONBOARDING
+                                        } else {
+                                            ScreenState.GAME
+                                        }
+                                    }
                                 )
+                                // 2. Onboarding Screen (OBD)
+                                ScreenState.ONBOARDING -> OnboardingScreen(
+                                    onOnboardingFinished = {
+                                        prefs.edit().putBoolean("has_seen_onboarding", true).apply()
+                                        currentScreen = ScreenState.GAME
+                                    }
+                                )
+                                // 3. Main Game Screen
                                 ScreenState.GAME -> BlockPuzzleGame()
                             }
                         }
