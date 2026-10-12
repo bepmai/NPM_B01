@@ -9,6 +9,11 @@ enum class GameMode(val displayName: String) {
     LEVELS("Level Campaign")
 }
 
+enum class PlayType(val displayName: String) {
+    FREE("Chơi Tự Do"),
+    PRESET("Xếp Hình Bàn Cờ")
+}
+
 /**
  * Represents a single block piece in the game.
  * [shape] is a 2D boolean array representing the occupied blocks of the piece.

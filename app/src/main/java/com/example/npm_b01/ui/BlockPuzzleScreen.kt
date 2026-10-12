@@ -85,7 +85,8 @@ data class PlacementPreview(
 
 @Composable
 fun BlockPuzzleGame(
-    viewModel: BlockPuzzleViewModel = viewModel()
+    viewModel: BlockPuzzleViewModel = viewModel(),
+    onGoHome: () -> Unit = {}
 ) {
     val state by viewModel.uiState.collectAsState()
     val density = LocalDensity.current
@@ -166,6 +167,7 @@ fun BlockPuzzleGame(
                     onGameModeChange = { viewModel.switchGameMode(it) },
                     onThemeChange = { viewModel.switchTheme(it) },
                     onOpenStats = { showStatsDialog = true },
+                    onGoHome = onGoHome,
                     onRestart = { viewModel.restartGame() }
                 )
 
@@ -324,6 +326,7 @@ fun GameHeader(
     onGameModeChange: (GameMode) -> Unit,
     onThemeChange: (GameTheme) -> Unit,
     onOpenStats: () -> Unit,
+    onGoHome: () -> Unit,
     onRestart: () -> Unit
 ) {
     var showThemeMenu by remember { mutableStateOf(false) }
@@ -432,6 +435,16 @@ fun GameHeader(
                         .background(theme.surfaceContainer)
                 ) {
                     Text(text = "🏆", fontSize = 16.sp)
+                }
+
+                // Home Button
+                IconButton(
+                    onClick = onGoHome,
+                    modifier = Modifier
+                        .clip(CircleShape)
+                        .background(theme.surfaceContainer)
+                ) {
+                    Text(text = "🏠", fontSize = 16.sp)
                 }
 
                 // Restart Button

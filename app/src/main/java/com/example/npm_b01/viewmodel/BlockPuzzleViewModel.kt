@@ -6,10 +6,12 @@ import androidx.lifecycle.AndroidViewModel
 import com.example.npm_b01.model.BlockPiece
 import com.example.npm_b01.model.GameMode
 import com.example.npm_b01.model.GameTheme
+import com.example.npm_b01.model.PlayType
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
+import java.util.Random
 
 data class ScoreEffect(
     val id: Long = System.currentTimeMillis(),
@@ -33,6 +35,7 @@ data class BlockPuzzleState(
     val totalLinesCleared: Int = 0,
     val activeEffect: ScoreEffect? = null,
     val gameMode: GameMode = GameMode.LEVELS,
+    val playType: PlayType = PlayType.FREE,
     val currentLevel: Int = 1,
     val levelTargetScore: Int = 300,
     val isLevelCompleted: Boolean = false
@@ -59,15 +62,79 @@ class BlockPuzzleViewModel(application: Application) : AndroidViewModel(applicat
     )
     val uiState: StateFlow<BlockPuzzleState> = _uiState.asStateFlow()
 
+    fun startFreePlay() {
+        _uiState.update { currentState ->
+            currentState.copy(
+                playType = PlayType.FREE,
+                score = 0,
+                combo = 1,
+                isGameOver = false,
+                isLevelCompleted = false,
+                rotationCharges = 3,
+                board = List(BlockPuzzleState.GRID_SIZE) { List(BlockPuzzleState.GRID_SIZE) { 0 } },
+                upcomingPieces = listOf(
+                    BlockPiece.getRandomPiece(),
+                    BlockPiece.getRandomPiece(),
+                    BlockPiece.getRandomPiece()
+                )
+            )
+        }
+    }
+
+    fun startPresetChallenge() {
+        val presetBoard = generatePresetBoard()
+        _uiState.update { currentState ->
+            currentState.copy(
+                playType = PlayType.PRESET,
+                score = 0,
+                combo = 1,
+                isGameOver = false,
+                isLevelCompleted = false,
+                rotationCharges = 3,
+                board = presetBoard,
+                upcomingPieces = listOf(
+                    BlockPiece.getRandomPiece(),
+                    BlockPiece.getRandomPiece(),
+                    BlockPiece.getRandomPiece()
+                )
+            )
+        }
+    }
+
+    private fun generatePresetBoard(): List<List<Int>> {
+        val board = MutableList(BlockPuzzleState.GRID_SIZE) { MutableList(BlockPuzzleState.GRID_SIZE) { 0 } }
+        val random = Random()
+        var placedCount = 0
+        val targetBlocks = 14
+
+        while (placedCount < targetBlocks) {
+            val r = random.nextInt(BlockPuzzleState.GRID_SIZE)
+            val c = random.nextInt(BlockPuzzleState.GRID_SIZE)
+            if (board[r][c] == 0) {
+                board[r][c] = random.nextInt(6) + 1
+                // Verify no row or col is completely filled yet
+                val rowFull = board[r].all { it != 0 }
+                val colFull = (0 until BlockPuzzleState.GRID_SIZE).all { board[it][c] != 0 }
+                if (rowFull || colFull) {
+                    board[r][c] = 0 // revert
+                } else {
+                    placedCount++
+                }
+            }
+        }
+        return board.map { it.toList() }
+    }
+
     fun switchGameMode(mode: GameMode) {
         _uiState.update { currentState ->
+            val newBoard = if (currentState.playType == PlayType.PRESET) generatePresetBoard() else List(BlockPuzzleState.GRID_SIZE) { List(BlockPuzzleState.GRID_SIZE) { 0 } }
             currentState.copy(
                 gameMode = mode,
                 score = 0,
                 combo = 1,
                 isGameOver = false,
                 isLevelCompleted = false,
-                board = List(BlockPuzzleState.GRID_SIZE) { List(BlockPuzzleState.GRID_SIZE) { 0 } },
+                board = newBoard,
                 upcomingPieces = listOf(
                     BlockPiece.getRandomPiece(),
                     BlockPiece.getRandomPiece(),
@@ -84,6 +151,8 @@ class BlockPuzzleViewModel(application: Application) : AndroidViewModel(applicat
 
         prefs.edit().putInt("current_level", nextLvl).apply()
 
+        val newBoard = if (currentState.playType == PlayType.PRESET) generatePresetBoard() else List(BlockPuzzleState.GRID_SIZE) { List(BlockPuzzleState.GRID_SIZE) { 0 } }
+
         _uiState.update {
             it.copy(
                 currentLevel = nextLvl,
@@ -92,7 +161,7 @@ class BlockPuzzleViewModel(application: Application) : AndroidViewModel(applicat
                 score = 0,
                 combo = 1,
                 rotationCharges = (it.rotationCharges + 2).coerceAtMost(5),
-                board = List(BlockPuzzleState.GRID_SIZE) { List(BlockPuzzleState.GRID_SIZE) { 0 } },
+                board = newBoard,
                 upcomingPieces = listOf(
                     BlockPiece.getRandomPiece(),
                     BlockPiece.getRandomPiece(),
@@ -113,6 +182,8 @@ class BlockPuzzleViewModel(application: Application) : AndroidViewModel(applicat
             .putInt("total_lines", currentState.totalLinesCleared)
             .apply()
 
+        val newBoard = if (currentState.playType == PlayType.PRESET) generatePresetBoard() else List(BlockPuzzleState.GRID_SIZE) { List(BlockPuzzleState.GRID_SIZE) { 0 } }
+
         _uiState.update {
             BlockPuzzleState(
                 highScore = newHigh,
@@ -120,9 +191,11 @@ class BlockPuzzleViewModel(application: Application) : AndroidViewModel(applicat
                 totalLinesCleared = currentState.totalLinesCleared,
                 currentTheme = currentState.currentTheme,
                 gameMode = currentState.gameMode,
+                playType = currentState.playType,
                 currentLevel = currentState.currentLevel,
                 levelTargetScore = currentState.currentLevel * 300,
                 rotationCharges = 3,
+                board = newBoard,
                 upcomingPieces = listOf(
                     BlockPiece.getRandomPiece(),
                     BlockPiece.getRandomPiece(),
@@ -270,7 +343,6 @@ class BlockPuzzleViewModel(application: Application) : AndroidViewModel(applicat
         val newHighScore = maxOf(newScore, currentState.highScore)
         val newTotalLines = currentState.totalLinesCleared + totalLinesCleared
 
-        // Check if Level Target Score is Reached!
         val isCompleted = currentState.gameMode == GameMode.LEVELS && newScore >= currentState.levelTargetScore
 
         prefs.edit()
