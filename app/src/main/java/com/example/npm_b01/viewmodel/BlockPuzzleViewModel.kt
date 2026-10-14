@@ -4,6 +4,7 @@ import android.app.Application
 import android.content.Context
 import androidx.lifecycle.AndroidViewModel
 import com.example.npm_b01.audio.SoundManager
+import com.example.npm_b01.i18n.AppLanguage
 import com.example.npm_b01.model.BlockPiece
 import com.example.npm_b01.model.GameMode
 import com.example.npm_b01.model.GameTheme
@@ -31,6 +32,7 @@ data class BlockPuzzleState(
     val combo: Int = 1,
     val isGameOver: Boolean = false,
     val currentTheme: GameTheme = GameTheme.NEON,
+    val currentLanguage: AppLanguage = AppLanguage.VI,
     val rotationCharges: Int = 3,
     val totalGamesPlayed: Int = 0,
     val totalLinesCleared: Int = 0,
@@ -60,6 +62,8 @@ class BlockPuzzleViewModel(application: Application) : AndroidViewModel(applicat
     private val prefs = getApplication<Application>().getSharedPreferences("block_puzzle_prefs", Context.MODE_PRIVATE)
 
     private val savedLevel = prefs.getInt("current_level", 1)
+    private val savedLangCode = prefs.getString("app_language", "vi") ?: "vi"
+    private val initialLang = if (savedLangCode == "en") AppLanguage.EN else AppLanguage.VI
 
     private fun getGridSizeForLevel(level: Int, mode: GameMode): Int {
         if (mode == GameMode.CLASSIC) return 8
@@ -89,12 +93,18 @@ class BlockPuzzleViewModel(application: Application) : AndroidViewModel(applicat
                 totalGamesPlayed = prefs.getInt("total_games", 0),
                 totalLinesCleared = prefs.getInt("total_lines", 0),
                 currentLevel = savedLevel,
+                currentLanguage = initialLang,
                 levelTargetScore = getTargetScoreForLevel(savedLevel),
                 board = List(initialGridSize) { List(initialGridSize) { 0 } }
             )
         }
     )
     val uiState: StateFlow<BlockPuzzleState> = _uiState.asStateFlow()
+
+    fun setLanguage(language: AppLanguage) {
+        prefs.edit().putString("app_language", language.code).apply()
+        _uiState.update { it.copy(currentLanguage = language) }
+    }
 
     fun startFreePlay() {
         _uiState.update { currentState ->
@@ -156,9 +166,6 @@ class BlockPuzzleViewModel(application: Application) : AndroidViewModel(applicat
         }
     }
 
-    /**
-     * Called automatically by timer or manual soft drop to move falling piece down 1 step.
-     */
     fun stepGravityDown() {
         val currentState = _uiState.value
         val piece = currentState.fallingPiece ?: return
@@ -170,7 +177,6 @@ class BlockPuzzleViewModel(application: Application) : AndroidViewModel(applicat
         ) {
             _uiState.update { it.copy(fallingRow = nextRow) }
         } else {
-            // Cannot move down further -> Land the piece
             dropFallingPiece()
         }
     }
@@ -222,7 +228,6 @@ class BlockPuzzleViewModel(application: Application) : AndroidViewModel(applicat
         val piece = currentState.fallingPiece ?: return
         if (currentState.isGameOver) return
 
-        // Calculate lowest valid row
         var landRow = currentState.fallingRow
         while (landRow + 1 + piece.height <= BlockPuzzleState.GRAVITY_ROWS &&
             canPlaceGravityPiece(currentState.gravityBoard, piece, landRow + 1, currentState.fallingCol)
@@ -230,7 +235,6 @@ class BlockPuzzleViewModel(application: Application) : AndroidViewModel(applicat
             landRow++
         }
 
-        // Write piece into gravity board
         val newBoard = currentState.gravityBoard.map { it.toMutableList() }
         for (r in piece.shape.indices) {
             for (c in piece.shape[r].indices) {
@@ -242,7 +246,6 @@ class BlockPuzzleViewModel(application: Application) : AndroidViewModel(applicat
 
         var addedScore = piece.blockCount
 
-        // Check full rows
         val rowsToClear = mutableListOf<Int>()
         for (r in 0 until BlockPuzzleState.GRAVITY_ROWS) {
             if (newBoard[r].all { it != 0 }) {
@@ -261,7 +264,6 @@ class BlockPuzzleViewModel(application: Application) : AndroidViewModel(applicat
             newCombo++
             SoundManager.playLineClearSound(newCombo)
 
-            // Shift rows down above cleared rows
             for (r in rowsToClear) {
                 for (above in r downTo 1) {
                     for (c in 0 until BlockPuzzleState.GRAVITY_COLS) {
@@ -279,7 +281,6 @@ class BlockPuzzleViewModel(application: Application) : AndroidViewModel(applicat
 
         val updatedBoard = newBoard.map { it.toList() }
 
-        // Spawn next piece
         val nextPiece = BlockPiece.getRandomPiece()
         val nextCol = (BlockPuzzleState.GRAVITY_COLS - nextPiece.width) / 2
         val isGameOver = !canPlaceGravityPiece(updatedBoard, nextPiece, 0, nextCol)
@@ -432,6 +433,7 @@ class BlockPuzzleViewModel(application: Application) : AndroidViewModel(applicat
                 totalGamesPlayed = newGames,
                 totalLinesCleared = currentState.totalLinesCleared,
                 currentTheme = currentState.currentTheme,
+                currentLanguage = currentState.currentLanguage,
                 gameMode = currentState.gameMode,
                 playType = currentState.playType,
                 currentLevel = currentState.currentLevel,

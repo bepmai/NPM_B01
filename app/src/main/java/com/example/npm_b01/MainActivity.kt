@@ -81,6 +81,10 @@ class MainActivity : ComponentActivity() {
                                     highScore = state.highScore,
                                     totalGames = state.totalGamesPlayed,
                                     totalLines = state.totalLinesCleared,
+                                    currentLanguage = state.currentLanguage,
+                                    currentTheme = state.currentTheme,
+                                    onLanguageChange = { viewModel.setLanguage(it) },
+                                    onThemeChange = { viewModel.switchTheme(it) },
                                     onSelectFreePlay = {
                                         viewModel.startFreePlay()
                                         currentScreen = ScreenState.GAME
