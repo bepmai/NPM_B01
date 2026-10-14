@@ -33,7 +33,6 @@ import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -61,7 +60,6 @@ import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
-import com.example.npm_b01.audio.SoundManager
 import com.example.npm_b01.model.BlockPiece
 import com.example.npm_b01.model.GameMode
 import com.example.npm_b01.model.GameTheme
@@ -216,7 +214,6 @@ fun BlockPuzzleGame(
                     rotationCharges = state.rotationCharges,
                     onRotatePiece = { index -> viewModel.rotatePiece(index) },
                     onDragStart = { index, piece, position ->
-                        SoundManager.playPickUpSound()
                         draggingState = DraggingState(index, piece, position)
                     },
                     onDrag = { position ->
@@ -344,25 +341,25 @@ fun GameHeader(
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Text(
                     text = if (state.gameMode == GameMode.LEVELS) "LEVEL ${state.currentLevel} (${state.gridSize}x${state.gridSize})" else "CLASSIC",
-                    fontSize = 18.sp,
+                    fontSize = 15.sp,
                     fontWeight = FontWeight.ExtraBold,
                     color = Color.White
                 )
 
-                Spacer(modifier = Modifier.width(6.dp))
+                Spacer(modifier = Modifier.width(4.dp))
 
                 // Mode Selector Button
                 Box {
                     Box(
                         modifier = Modifier
-                            .clip(RoundedCornerShape(8.dp))
+                            .clip(RoundedCornerShape(6.dp))
                             .background(theme.surfaceContainer)
                             .clickable { showModeMenu = true }
-                            .padding(horizontal = 8.dp, vertical = 4.dp)
+                            .padding(horizontal = 6.dp, vertical = 3.dp)
                     ) {
                         Text(
                             text = "⚙️ Mode",
-                            fontSize = 11.sp,
+                            fontSize = 10.sp,
                             fontWeight = FontWeight.Bold,
                             color = theme.accent
                         )
@@ -392,16 +389,19 @@ fun GameHeader(
                 }
             }
 
-            Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+            // Action Buttons - Compact 34dp layout so nothing overflows
+            Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
                 // Theme Selector
                 Box {
-                    IconButton(
-                        onClick = { showThemeMenu = true },
+                    Box(
                         modifier = Modifier
+                            .size(34.dp)
                             .clip(CircleShape)
                             .background(theme.surfaceContainer)
+                            .clickable { showThemeMenu = true },
+                        contentAlignment = Alignment.Center
                     ) {
-                        Text(text = "🎨", fontSize = 15.sp)
+                        Text(text = "🎨", fontSize = 14.sp)
                     }
 
                     DropdownMenu(
@@ -428,31 +428,37 @@ fun GameHeader(
                 }
 
                 // Stats Button
-                IconButton(
-                    onClick = onOpenStats,
+                Box(
                     modifier = Modifier
+                        .size(34.dp)
                         .clip(CircleShape)
                         .background(theme.surfaceContainer)
+                        .clickable { onOpenStats() },
+                    contentAlignment = Alignment.Center
                 ) {
-                    Text(text = "🏆", fontSize = 15.sp)
+                    Text(text = "🏆", fontSize = 14.sp)
                 }
 
                 // Home Button
-                IconButton(
-                    onClick = onGoHome,
+                Box(
                     modifier = Modifier
+                        .size(34.dp)
                         .clip(CircleShape)
                         .background(theme.surfaceContainer)
+                        .clickable { onGoHome() },
+                    contentAlignment = Alignment.Center
                 ) {
-                    Text(text = "🏠", fontSize = 15.sp)
+                    Text(text = "🏠", fontSize = 14.sp)
                 }
 
                 // Restart Button
-                IconButton(
-                    onClick = onRestart,
+                Box(
                     modifier = Modifier
+                        .size(34.dp)
                         .clip(CircleShape)
                         .background(theme.surfaceContainer)
+                        .clickable { onRestart() },
+                    contentAlignment = Alignment.Center
                 ) {
                     Text(
                         text = "↺",
