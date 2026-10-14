@@ -39,9 +39,20 @@ data class BlockPuzzleState(
     val playType: PlayType = PlayType.FREE,
     val currentLevel: Int = 1,
     val levelTargetScore: Int = 150,
-    val isLevelCompleted: Boolean = false
+    val isLevelCompleted: Boolean = false,
+
+    // Gravity Drop Mode State
+    val gravityBoard: List<List<Int>> = List(GRAVITY_ROWS) { List(GRAVITY_COLS) { 0 } },
+    val fallingPiece: BlockPiece? = null,
+    val fallingCol: Int = 3,
+    val fallingRow: Int = 0
 ) {
     val gridSize: Int get() = if (board.isNotEmpty()) board.size else 8
+
+    companion object {
+        const val GRAVITY_COLS = 8
+        const val GRAVITY_ROWS = 12
+    }
 }
 
 class BlockPuzzleViewModel(application: Application) : AndroidViewModel(application) {
@@ -53,9 +64,9 @@ class BlockPuzzleViewModel(application: Application) : AndroidViewModel(applicat
     private fun getGridSizeForLevel(level: Int, mode: GameMode): Int {
         if (mode == GameMode.CLASSIC) return 8
         return when (level) {
-            1, 2 -> 6   // Level 1 & 2: 6x6 grid (Dễ cho người mới)
-            3, 4, 5 -> 7 // Level 3-5: 7x7 grid
-            else -> 8    // Level 6+: 8x8 grid đầy đủ
+            1, 2 -> 6
+            3, 4, 5 -> 7
+            else -> 8
         }
     }
 
@@ -125,6 +136,204 @@ class BlockPuzzleViewModel(application: Application) : AndroidViewModel(applicat
                 )
             )
         }
+    }
+
+    fun startGravityDrop() {
+        val firstPiece = BlockPiece.getRandomPiece()
+        val initialCol = (BlockPuzzleState.GRAVITY_COLS - firstPiece.width) / 2
+        _uiState.update { currentState ->
+            currentState.copy(
+                playType = PlayType.GRAVITY,
+                score = 0,
+                combo = 1,
+                isGameOver = false,
+                isLevelCompleted = false,
+                gravityBoard = List(BlockPuzzleState.GRAVITY_ROWS) { List(BlockPuzzleState.GRAVITY_COLS) { 0 } },
+                fallingPiece = firstPiece,
+                fallingCol = initialCol,
+                fallingRow = 0
+            )
+        }
+    }
+
+    /**
+     * Called automatically by timer or manual soft drop to move falling piece down 1 step.
+     */
+    fun stepGravityDown() {
+        val currentState = _uiState.value
+        val piece = currentState.fallingPiece ?: return
+        if (currentState.isGameOver || currentState.playType != PlayType.GRAVITY) return
+
+        val nextRow = currentState.fallingRow + 1
+        if (nextRow + piece.height <= BlockPuzzleState.GRAVITY_ROWS &&
+            canPlaceGravityPiece(currentState.gravityBoard, piece, nextRow, currentState.fallingCol)
+        ) {
+            _uiState.update { it.copy(fallingRow = nextRow) }
+        } else {
+            // Cannot move down further -> Land the piece
+            dropFallingPiece()
+        }
+    }
+
+    fun moveFallingLeft() {
+        val currentState = _uiState.value
+        val piece = currentState.fallingPiece ?: return
+        if (currentState.fallingCol > 0) {
+            val newCol = currentState.fallingCol - 1
+            if (canPlaceGravityPiece(currentState.gravityBoard, piece, currentState.fallingRow, newCol)) {
+                _uiState.update { it.copy(fallingCol = newCol) }
+            }
+        }
+    }
+
+    fun moveFallingRight() {
+        val currentState = _uiState.value
+        val piece = currentState.fallingPiece ?: return
+        if (currentState.fallingCol + piece.width < BlockPuzzleState.GRAVITY_COLS) {
+            val newCol = currentState.fallingCol + 1
+            if (canPlaceGravityPiece(currentState.gravityBoard, piece, currentState.fallingRow, newCol)) {
+                _uiState.update { it.copy(fallingCol = newCol) }
+            }
+        }
+    }
+
+    fun rotateFallingPiece() {
+        val currentState = _uiState.value
+        val piece = currentState.fallingPiece ?: return
+        val rotated = piece.rotate()
+
+        var targetCol = currentState.fallingCol
+        if (targetCol + rotated.width > BlockPuzzleState.GRAVITY_COLS) {
+            targetCol = BlockPuzzleState.GRAVITY_COLS - rotated.width
+        }
+
+        if (canPlaceGravityPiece(currentState.gravityBoard, rotated, currentState.fallingRow, targetCol)) {
+            _uiState.update {
+                it.copy(
+                    fallingPiece = rotated,
+                    fallingCol = targetCol
+                )
+            }
+        }
+    }
+
+    fun dropFallingPiece() {
+        val currentState = _uiState.value
+        val piece = currentState.fallingPiece ?: return
+        if (currentState.isGameOver) return
+
+        // Calculate lowest valid row
+        var landRow = currentState.fallingRow
+        while (landRow + 1 + piece.height <= BlockPuzzleState.GRAVITY_ROWS &&
+            canPlaceGravityPiece(currentState.gravityBoard, piece, landRow + 1, currentState.fallingCol)
+        ) {
+            landRow++
+        }
+
+        // Write piece into gravity board
+        val newBoard = currentState.gravityBoard.map { it.toMutableList() }
+        for (r in piece.shape.indices) {
+            for (c in piece.shape[r].indices) {
+                if (piece.shape[r][c]) {
+                    newBoard[landRow + r][currentState.fallingCol + c] = piece.colorId
+                }
+            }
+        }
+
+        var addedScore = piece.blockCount
+
+        // Check full rows
+        val rowsToClear = mutableListOf<Int>()
+        for (r in 0 until BlockPuzzleState.GRAVITY_ROWS) {
+            if (newBoard[r].all { it != 0 }) {
+                rowsToClear.add(r)
+            }
+        }
+
+        val totalLines = rowsToClear.size
+        var newCombo = currentState.combo
+        var effect: ScoreEffect? = null
+
+        if (totalLines > 0) {
+            val linePoints = totalLines * 20 * newCombo
+            addedScore += linePoints
+            effect = ScoreEffect(text = "+$linePoints! COMBO x$newCombo🔥")
+            newCombo++
+            SoundManager.playLineClearSound(newCombo)
+
+            // Shift rows down above cleared rows
+            for (r in rowsToClear) {
+                for (above in r downTo 1) {
+                    for (c in 0 until BlockPuzzleState.GRAVITY_COLS) {
+                        newBoard[above][c] = newBoard[above - 1][c]
+                    }
+                }
+                for (c in 0 until BlockPuzzleState.GRAVITY_COLS) {
+                    newBoard[0][c] = 0
+                }
+            }
+        } else {
+            newCombo = 1
+            SoundManager.playPlaceSound()
+        }
+
+        val updatedBoard = newBoard.map { it.toList() }
+
+        // Spawn next piece
+        val nextPiece = BlockPiece.getRandomPiece()
+        val nextCol = (BlockPuzzleState.GRAVITY_COLS - nextPiece.width) / 2
+        val isGameOver = !canPlaceGravityPiece(updatedBoard, nextPiece, 0, nextCol)
+
+        val newScore = currentState.score + addedScore
+        val newHigh = maxOf(newScore, currentState.highScore)
+        val newTotalLines = currentState.totalLinesCleared + totalLines
+
+        prefs.edit()
+            .putInt("high_score", newHigh)
+            .putInt("total_lines", newTotalLines)
+            .apply()
+
+        _uiState.update {
+            it.copy(
+                gravityBoard = updatedBoard,
+                fallingPiece = nextPiece,
+                fallingCol = nextCol,
+                fallingRow = 0,
+                score = newScore,
+                highScore = newHigh,
+                combo = newCombo,
+                totalLinesCleared = newTotalLines,
+                isGameOver = isGameOver,
+                activeEffect = effect
+            )
+        }
+    }
+
+    private fun canPlaceGravityPiece(
+        board: List<List<Int>>,
+        piece: BlockPiece,
+        startRow: Int,
+        startCol: Int
+    ): Boolean {
+        for (r in piece.shape.indices) {
+            for (c in piece.shape[r].indices) {
+                if (piece.shape[r][c]) {
+                    val tr = startRow + r
+                    val tc = startCol + c
+
+                    if (tr !in 0 until BlockPuzzleState.GRAVITY_ROWS ||
+                        tc !in 0 until BlockPuzzleState.GRAVITY_COLS
+                    ) {
+                        return false
+                    }
+
+                    if (board[tr][tc] != 0) {
+                        return false
+                    }
+                }
+            }
+        }
+        return true
     }
 
     private fun generatePresetBoard(gridSize: Int): List<List<Int>> {
@@ -208,6 +417,11 @@ class BlockPuzzleViewModel(application: Application) : AndroidViewModel(applicat
             .putInt("total_games", newGames)
             .putInt("total_lines", currentState.totalLinesCleared)
             .apply()
+
+        if (currentState.playType == PlayType.GRAVITY) {
+            startGravityDrop()
+            return
+        }
 
         val gridSize = getGridSizeForLevel(currentState.currentLevel, currentState.gameMode)
         val newBoard = if (currentState.playType == PlayType.PRESET) generatePresetBoard(gridSize) else List(gridSize) { List(gridSize) { 0 } }

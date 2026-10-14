@@ -22,6 +22,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.tooling.preview.Preview
 import com.example.npm_b01.ui.AnimatedSplashScreen
 import com.example.npm_b01.ui.BlockPuzzleGame
+import com.example.npm_b01.ui.GravityDropGame
 import com.example.npm_b01.ui.HomeScreen
 import com.example.npm_b01.ui.OnboardingScreen
 import com.example.npm_b01.ui.theme.NPM_B01Theme
@@ -31,7 +32,8 @@ enum class ScreenState {
     SPLASH,
     ONBOARDING,
     HOME,
-    GAME
+    GAME,
+    GRAVITY_GAME
 }
 
 class MainActivity : ComponentActivity() {
@@ -86,10 +88,19 @@ class MainActivity : ComponentActivity() {
                                     onSelectPresetChallenge = {
                                         viewModel.startPresetChallenge()
                                         currentScreen = ScreenState.GAME
+                                    },
+                                    onSelectGravityDrop = {
+                                        viewModel.startGravityDrop()
+                                        currentScreen = ScreenState.GRAVITY_GAME
                                     }
                                 )
-                                // 4. Main Game Screen
+                                // 4. Main Drag & Drop Block Game Screen
                                 ScreenState.GAME -> BlockPuzzleGame(
+                                    viewModel = viewModel,
+                                    onGoHome = { currentScreen = ScreenState.HOME }
+                                )
+                                // 5. Gravity Drop Block Game Screen
+                                ScreenState.GRAVITY_GAME -> GravityDropGame(
                                     viewModel = viewModel,
                                     onGoHome = { currentScreen = ScreenState.HOME }
                                 )

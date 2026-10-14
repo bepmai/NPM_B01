@@ -11,7 +11,8 @@ enum class GameMode(val displayName: String) {
 
 enum class PlayType(val displayName: String) {
     FREE("Chơi Tự Do"),
-    PRESET("Xếp Hình Bàn Cờ")
+    PRESET("Xếp Hình Bàn Cờ"),
+    GRAVITY("Thả Khối Rơi")
 }
 
 /**
