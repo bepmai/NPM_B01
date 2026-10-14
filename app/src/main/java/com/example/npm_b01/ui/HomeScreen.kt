@@ -17,13 +17,12 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material3.Button
-import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.IconButton
@@ -69,18 +68,16 @@ fun HomeScreen(
             Column(
                 modifier = Modifier
                     .fillMaxSize()
-                    .padding(16.dp)
+                    .padding(20.dp)
                     .verticalScroll(rememberScrollState()),
                 horizontalAlignment = Alignment.CenterHorizontally,
                 verticalArrangement = Arrangement.SpaceBetween
             ) {
-                // Header Section
+                // Header
                 Column(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalAlignment = Alignment.CenterHorizontally
                 ) {
-                    Spacer(modifier = Modifier.height(12.dp))
-
                     Row(
                         modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.SpaceBetween,
@@ -88,7 +85,7 @@ fun HomeScreen(
                     ) {
                         Text(
                             text = AppStrings.get("app_title", currentLanguage),
-                            fontSize = 24.sp,
+                            fontSize = 26.sp,
                             fontWeight = FontWeight.Black,
                             color = Color.White
                         )
@@ -103,15 +100,19 @@ fun HomeScreen(
                         }
                     }
 
-                    Spacer(modifier = Modifier.height(10.dp))
+                    Spacer(modifier = Modifier.height(14.dp))
 
-                    // High Score Badge
+                    // Best Score Badge
                     Box(
                         modifier = Modifier
-                            .clip(RoundedCornerShape(16.dp))
-                            .background(Color(0xFF1E293B))
-                            .border(1.dp, Color(0xFF334155), RoundedCornerShape(16.dp))
-                            .padding(horizontal = 16.dp, vertical = 6.dp)
+                            .clip(RoundedCornerShape(20.dp))
+                            .background(
+                                Brush.horizontalGradient(
+                                    listOf(Color(0xFF1E293B), Color(0xFF334155))
+                                )
+                            )
+                            .border(1.dp, Color(0xFFFFD54F).copy(alpha = 0.5f), RoundedCornerShape(20.dp))
+                            .padding(horizontal = 20.dp, vertical = 8.dp)
                     ) {
                         Row(verticalAlignment = Alignment.CenterVertically) {
                             Text(
@@ -120,74 +121,100 @@ fun HomeScreen(
                                 color = Color(0xFF94A3B8),
                                 fontWeight = FontWeight.Bold
                             )
-                            Text(text = "$highScore", fontSize = 16.sp, color = Color(0xFFFFD54F), fontWeight = FontWeight.ExtraBold)
+                            Spacer(modifier = Modifier.width(4.dp))
+                            Text(
+                                text = "$highScore",
+                                fontSize = 20.sp,
+                                color = Color(0xFFFFD54F),
+                                fontWeight = FontWeight.Black
+                            )
                         }
                     }
                 }
 
-                Spacer(modifier = Modifier.height(16.dp))
+                Spacer(modifier = Modifier.height(20.dp))
 
-                // Mode Options Section
+                // Mode Cards - Clean, Visual & Action-Oriented
                 Column(
                     modifier = Modifier.fillMaxWidth(),
-                    verticalArrangement = Arrangement.spacedBy(14.dp)
+                    verticalArrangement = Arrangement.spacedBy(16.dp)
                 ) {
-                    // Mode 1: Free Play Card
-                    ModeSelectionCard(
+                    // Mode 1: Free Play
+                    GameCardBanner(
                         title = AppStrings.get("mode_free_title", currentLanguage),
                         badge = AppStrings.get("mode_free_badge", currentLanguage),
-                        badgeColor = Color(0xFF00BCD4),
-                        description = AppStrings.get("mode_free_desc", currentLanguage),
-                        buttonText = AppStrings.get("play_now", currentLanguage),
+                        icon = "🎮",
                         gradient = listOf(Color(0xFF0284C7), Color(0xFF0369A1)),
                         onClick = onSelectFreePlay
                     )
 
-                    // Mode 2: Preset Puzzle Card
-                    ModeSelectionCard(
+                    // Mode 2: Preset Puzzle Challenge
+                    GameCardBanner(
                         title = AppStrings.get("mode_preset_title", currentLanguage),
                         badge = AppStrings.get("mode_preset_badge", currentLanguage),
-                        badgeColor = Color(0xFFFF9800),
-                        description = AppStrings.get("mode_preset_desc", currentLanguage),
-                        buttonText = AppStrings.get("play_now", currentLanguage),
+                        icon = "🧩",
                         gradient = listOf(Color(0xFFD97706), Color(0xFFB45309)),
                         onClick = onSelectPresetChallenge
                     )
 
-                    // Mode 3: Gravity Drop Mode Card
-                    ModeSelectionCard(
+                    // Mode 3: Gravity Drop
+                    GameCardBanner(
                         title = AppStrings.get("mode_gravity_title", currentLanguage),
                         badge = AppStrings.get("mode_gravity_badge", currentLanguage),
-                        badgeColor = Color(0xFF4CAF50),
-                        description = AppStrings.get("mode_gravity_desc", currentLanguage),
-                        buttonText = AppStrings.get("play_now", currentLanguage),
+                        icon = "⏬",
                         gradient = listOf(Color(0xFF16A34A), Color(0xFF15803D)),
                         onClick = onSelectGravityDrop
                     )
                 }
 
-                Spacer(modifier = Modifier.height(20.dp))
+                Spacer(modifier = Modifier.height(24.dp))
 
-                // Footer Quick Stats
+                // Compact Footer Stats
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
                         .clip(RoundedCornerShape(16.dp))
                         .background(Color(0xFF1E293B))
-                        .padding(12.dp),
+                        .padding(14.dp),
                     horizontalArrangement = Arrangement.SpaceEvenly,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                        Text(text = AppStrings.get("played", currentLanguage), fontSize = 10.sp, color = Color.Gray, fontWeight = FontWeight.Bold)
-                        Text(text = "$totalGames ${AppStrings.get("games_count", currentLanguage)}", fontSize = 14.sp, color = Color.White, fontWeight = FontWeight.Bold)
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Text(text = "🎯 ", fontSize = 16.sp)
+                        Column {
+                            Text(
+                                text = AppStrings.get("played", currentLanguage),
+                                fontSize = 9.sp,
+                                color = Color.Gray,
+                                fontWeight = FontWeight.Bold
+                            )
+                            Text(
+                                text = "$totalGames ${AppStrings.get("games_count", currentLanguage)}",
+                                fontSize = 13.sp,
+                                color = Color.White,
+                                fontWeight = FontWeight.Bold
+                            )
+                        }
                     }
 
-                    Box(modifier = Modifier.width(1.dp).height(20.dp).background(Color(0xFF334155)))
+                    Box(modifier = Modifier.width(1.dp).height(24.dp).background(Color(0xFF334155)))
 
-                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                        Text(text = AppStrings.get("cleared", currentLanguage), fontSize = 10.sp, color = Color.Gray, fontWeight = FontWeight.Bold)
-                        Text(text = "$totalLines ${AppStrings.get("lines_count", currentLanguage)}", fontSize = 14.sp, color = Color(0xFF38BDF8), fontWeight = FontWeight.Bold)
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Text(text = "🔥 ", fontSize = 16.sp)
+                        Column {
+                            Text(
+                                text = AppStrings.get("cleared", currentLanguage),
+                                fontSize = 9.sp,
+                                color = Color.Gray,
+                                fontWeight = FontWeight.Bold
+                            )
+                            Text(
+                                text = "$totalLines ${AppStrings.get("lines_count", currentLanguage)}",
+                                fontSize = 13.sp,
+                                color = Color(0xFF38BDF8),
+                                fontWeight = FontWeight.Bold
+                            )
+                        }
                     }
                 }
             }
@@ -211,86 +238,82 @@ fun HomeScreen(
 }
 
 @Composable
-private fun ModeSelectionCard(
+private fun GameCardBanner(
     title: String,
     badge: String,
-    badgeColor: Color,
-    description: String,
-    buttonText: String,
+    icon: String,
     gradient: List<Color>,
     onClick: () -> Unit
 ) {
     Card(
         modifier = Modifier
             .fillMaxWidth()
+            .height(95.dp)
             .clickable { onClick() },
-        colors = CardDefaults.cardColors(containerColor = Color(0xFF1E293B)),
-        shape = RoundedCornerShape(20.dp),
-        elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
+        shape = RoundedCornerShape(22.dp),
+        colors = CardDefaults.cardColors(containerColor = Color.Transparent),
+        elevation = CardDefaults.cardElevation(defaultElevation = 6.dp)
     ) {
-        Column(
+        Box(
             modifier = Modifier
-                .fillMaxWidth()
-                .padding(16.dp)
+                .fillMaxSize()
+                .background(Brush.horizontalGradient(gradient))
+                .padding(horizontal = 20.dp, vertical = 14.dp),
+            contentAlignment = Alignment.Center
         ) {
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Text(
-                    text = title,
-                    fontSize = 17.sp,
-                    fontWeight = FontWeight.ExtraBold,
-                    color = Color.White
-                )
-
-                Box(
-                    modifier = Modifier
-                        .clip(RoundedCornerShape(10.dp))
-                        .background(badgeColor.copy(alpha = 0.2f))
-                        .padding(horizontal = 8.dp, vertical = 3.dp)
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(14.dp)
                 ) {
-                    Text(
-                        text = badge,
-                        fontSize = 10.sp,
-                        fontWeight = FontWeight.Bold,
-                        color = badgeColor
-                    )
+                    Box(
+                        modifier = Modifier
+                            .size(48.dp)
+                            .clip(RoundedCornerShape(14.dp))
+                            .background(Color.White.copy(alpha = 0.2f)),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text(text = icon, fontSize = 24.sp)
+                    }
+
+                    Column {
+                        Text(
+                            text = title,
+                            fontSize = 18.sp,
+                            fontWeight = FontWeight.Black,
+                            color = Color.White
+                        )
+
+                        Box(
+                            modifier = Modifier
+                                .padding(top = 4.dp)
+                                .clip(RoundedCornerShape(8.dp))
+                                .background(Color.Black.copy(alpha = 0.25f))
+                                .padding(horizontal = 8.dp, vertical = 2.dp)
+                        ) {
+                            Text(
+                                text = badge,
+                                fontSize = 10.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = Color.White
+                            )
+                        }
+                    }
                 }
-            }
 
-            Spacer(modifier = Modifier.height(6.dp))
-
-            Text(
-                text = description,
-                fontSize = 12.sp,
-                color = Color(0xFF94A3B8),
-                lineHeight = 18.sp
-            )
-
-            Spacer(modifier = Modifier.height(12.dp))
-
-            Button(
-                onClick = onClick,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(42.dp),
-                colors = ButtonDefaults.buttonColors(containerColor = Color.Transparent),
-                shape = RoundedCornerShape(12.dp)
-            ) {
+                // Play Arrow
                 Box(
                     modifier = Modifier
-                        .fillMaxSize()
-                        .background(Brush.horizontalGradient(gradient), RoundedCornerShape(12.dp)),
+                        .size(38.dp)
+                        .clip(CircleShape)
+                        .background(Color.White.copy(alpha = 0.25f)),
                     contentAlignment = Alignment.Center
                 ) {
-                    Text(
-                        text = buttonText,
-                        fontSize = 14.sp,
-                        fontWeight = FontWeight.Bold,
-                        color = Color.White
-                    )
+                    Text(text = "➔", fontSize = 18.sp, color = Color.White, fontWeight = FontWeight.Bold)
                 }
             }
         }
